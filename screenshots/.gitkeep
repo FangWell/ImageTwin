@@ -1,0 +1,10 @@
+# Screenshots
+
+This directory contains screenshots for the GitHub README.
+
+Add your screenshots here:
+- main-interface.png - Main interface screenshot
+- search-results.png - Search results with previews
+
+Note: Screenshot files are ignored by git by default.
+If you want to include them in the repository, remove them from .gitignore.

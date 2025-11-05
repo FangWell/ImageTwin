@@ -1,0 +1,36 @@
+{
+  "name": "ImageTwin",
+  "version": "1.0.0",
+  "description": "A web-based image similarity search tool using perceptual hashing",
+  "description_zh": "基于Web的图片相似度搜索工具，使用感知哈希算法",
+  "author": "ImageTwin Team",
+  "license": "MIT",
+  "homepage": "https://github.com/FangWell/ImageTwin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FangWell/ImageTwin.git"
+  },
+  "keywords": [
+    "image-similarity",
+    "duplicate-detection",
+    "perceptual-hashing",
+    "image-search",
+    "computer-vision",
+    "fastapi",
+    "web-app"
+  ],
+  "languages": ["Python", "JavaScript", "HTML", "CSS"],
+  "platforms": ["Windows", "macOS", "Linux"],
+  "requirements": {
+    "python": ">=3.8",
+    "dependencies": [
+      "fastapi",
+      "uvicorn",
+      "pillow",
+      "imagehash",
+      "python-multipart",
+      "pydantic",
+      "aiofiles"
+    ]
+  }
+}

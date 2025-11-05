@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ImageTwin - 图片相似度搜索工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .upload-area {
+            border: 2px dashed #007bff;
+            border-radius: 5px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        .upload-area:hover {
+            background-color: #f8f9fa;
+        }
+        .upload-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 5px;
+            margin: 10px auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .progress-container {
+            margin: 10px 0;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #007bff;
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .result-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .result-preview {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+        .result-info {
+            flex: 1;
+        }
+        .similarity {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .path {
+            font-family: monospace;
+            word-break: break-all;
+            margin: 5px 0;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .slider-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #similarityRange {
+            width: 100%;
+        }
+        .status {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 ImageTwin - 图片相似度搜索工具</h1>
+        
+        <div class="status" id="statusDiv">
+            <strong>状态:</strong> <span id="statusText">连接中...</span>
+        </div>
+
+        <div class="form-group">
+            <label for="directoryInput">搜索目录:</label>
+            <input type="text" id="directoryInput" placeholder="例如: C:\Pictures" value="">
+            <button onclick="indexDirectory()" id="indexBtn">索引目录</button>
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar">0%</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>上传图片:</label>
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect()">
+                <div id="uploadText">点击选择图片文件</div>
+                <div id="selectedFile" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>搜索参数:</label>
+            <div class="controls">
+                <div class="slider-group">
+                    <label>相似度阈值: <span id="thresholdValue">0.80</span></label>
+                    <input type="range" id="similarityRange" min="0.1" max="1.0" step="0.01" value="0.8" oninput="updateThreshold()">
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="ignoreResolution">
+                    <label for="ignoreResolution">忽略分辨率</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="ignoreMetadata">
+                    <label for="ignoreMetadata">忽略元数据</label>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="searchSimilar()" id="searchBtn">🔍 搜索相似图片</button>
+
+        <div class="results" id="results" style="display: none;">
+            <h3>搜索结果:</h3>
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+        
+        // 检查服务器状态
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/status`);
+                const data = await response.json();
+                document.getElementById('statusText').textContent = 
+                    `运行中 - 已索引 ${data.total_indexed_images} 张图片`;
+                document.getElementById('statusDiv').style.backgroundColor = '#d4edda';
+                
+                // 恢复上次的目录设置
+                if (data.last_directory && !document.getElementById('directoryInput').value) {
+                    document.getElementById('directoryInput').value = data.last_directory;
+                }
+            } catch (error) {
+                document.getElementById('statusText').textContent = '后端服务未连接';
+                document.getElementById('statusDiv').style.backgroundColor = '#f8d7da';
+            }
+        }
+
+        // 更新相似度阈值显示
+        function updateThreshold() {
+            const value = document.getElementById('similarityRange').value;
+            document.getElementById('thresholdValue').textContent = parseFloat(value).toFixed(2);
+        }
+
+        // 处理文件选择
+        function handleFileSelect() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (file) {
+                document.getElementById('uploadText').style.display = 'none';
+                document.getElementById('selectedFile').style.display = 'block';
+                
+                // 创建预览
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('selectedFile').innerHTML = `
+                        <div>已选择: ${file.name}</div>
+                        <img src="${e.target.result}" alt="预览" class="upload-preview">
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 索引目录
+        async function indexDirectory() {
+            const directory = document.getElementById('directoryInput').value.trim();
+            if (!directory) {
+                alert('请输入目录路径');
+                return;
+            }
+
+            const indexBtn = document.getElementById('indexBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            
+            // 更新按钮状态
+            indexBtn.textContent = '索引中...';
+            indexBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            
+            // 模拟进度更新
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = Math.round(progress) + '%';
+            }, 500);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/index`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        directories: [directory]
+                    })
+                });
+
+                const data = await response.json();
+                
+                // 完成进度
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+                
+                setTimeout(() => {
+                    if (response.ok) {
+                        alert(data.message);
+                        checkStatus(); // 更新状态
+                    } else {
+                        alert(`索引失败: ${data.detail}`);
+                    }
+                    
+                    // 重置按钮状态
+                    indexBtn.textContent = '索引目录';
+                    indexBtn.disabled = false;
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                    progressBar.textContent = '0%';
+                }, 1000);
+                
+            } catch (error) {
+                clearInterval(progressInterval);
+                alert(`索引失败: ${error.message}`);
+                
+                // 重置按钮状态
+                indexBtn.textContent = '索引目录';
+                indexBtn.disabled = false;
+                progressContainer.style.display = 'none';
+                progressBar.style.width = '0%';
+                progressBar.textContent = '0%';
+            }
+        }
+
+        // 搜索相似图片
+        async function searchSimilar() {
+            const fileInput = document.getElementById('fileInput');
+            const directory = document.getElementById('directoryInput').value.trim();
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('请选择图片文件');
+                return;
+            }
+            if (!directory) {
+                alert('请输入搜索目录');
+                return;
+            }
+
+            const searchBtn = document.getElementById('searchBtn');
+            const originalText = searchBtn.textContent;
+            searchBtn.innerHTML = '<span class="loading"></span>搜索中...';
+            searchBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('directory', directory);
+                formData.append('similarity_threshold', document.getElementById('similarityRange').value);
+                formData.append('ignore_resolution', document.getElementById('ignoreResolution').checked);
+                formData.append('ignore_metadata', document.getElementById('ignoreMetadata').checked);
+
+                const response = await fetch(`${API_BASE}/api/search`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayResults(data.results);
+                } else {
+                    alert(`搜索失败: ${data.detail}`);
+                }
+            } catch (error) {
+                alert(`搜索失败: ${error.message}`);
+            } finally {
+                searchBtn.innerHTML = originalText;
+                searchBtn.disabled = false;
+            }
+        }
+
+        // 显示搜索结果
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            const resultsList = document.getElementById('resultsList');
+
+            if (results.length === 0) {
+                resultsList.innerHTML = '<p>未找到相似图片</p>';
+            } else {
+                resultsList.innerHTML = results.map((result, index) => {
+                    const encodedPath = encodeURIComponent(result.path);
+                    const imageUrl = `${API_BASE}/api/image/${encodedPath}`;
+                    
+                    return `
+                    <div class="result-item">
+                        <img src="${imageUrl}" 
+                             alt="预览图片" 
+                             class="result-preview"
+                             style="cursor: pointer;"
+                             onclick="showLargePreview('${imageUrl}', '${result.path.replace(/\\/g, '\\\\')}')"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="result-preview" style="width: 100px; height: 100px; background: #f0f0f0; border-radius: 5px; display: none; align-items: center; justify-content: center; color: #666; font-size: 12px; text-align: center; flex-shrink: 0;">
+                            🖼️<br>加载失败
+                        </div>
+                        <div class="result-info">
+                            <div class="similarity">相似度: ${(result.similarity * 100).toFixed(1)}%</div>
+                            <div class="path" style="font-family: monospace; word-break: break-all; margin: 5px 0; font-size: 12px;">${result.path}</div>
+                            <div style="margin-top: 10px;">
+                                <button onclick="copyPath('${result.path.replace(/\\/g, '\\\\')}')">📋 复制路径</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            resultsDiv.style.display = 'block';
+        }
+
+        // 显示大图预览
+        function showLargePreview(imageUrl, imagePath) {
+            // 创建模态框
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                cursor: pointer;
+            `;
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.style.cssText = `
+                max-width: 90%;
+                max-height: 90%;
+                border-radius: 5px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            `;
+            
+            const info = document.createElement('div');
+            info.textContent = imagePath;
+            info.style.cssText = `
+                position: absolute;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                color: white;
+                background: rgba(0,0,0,0.7);
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-family: monospace;
+                font-size: 12px;
+                max-width: 80%;
+                text-align: center;
+                word-break: break-all;
+            `;
+            
+            modal.appendChild(img);
+            modal.appendChild(info);
+            document.body.appendChild(modal);
+            
+            // 点击关闭
+            modal.onclick = () => {
+                document.body.removeChild(modal);
+            };
+        }
+
+        // 复制路径到剪贴板
+        function copyPath(path) {
+            navigator.clipboard.writeText(path).then(() => {
+                showToast('路径已复制到剪贴板');
+            }).catch(() => {
+                // 备用方法
+                const textArea = document.createElement('textarea');
+                textArea.value = path;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('路径已复制到剪贴板');
+            });
+        }
+
+
+
+        // 显示提示消息
+        function showToast(message) {
+            // 创建提示元素
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #333;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                z-index: 1000;
+                font-size: 14px;
+                max-width: 400px;
+                word-wrap: break-word;
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
+
+        // 页面加载时检查状态
+        checkStatus();
+        
+        // 每30秒检查一次状态
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+</html>
