@@ -1,8 +1,0 @@
-# 最小化依赖列表 - 用于解决兼容性问题
-fastapi
-uvicorn
-python-multipart
-Pillow
-imagehash
-pydantic
-aiofiles
