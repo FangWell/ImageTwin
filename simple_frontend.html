@@ -57,9 +57,15 @@
             text-align: center;
             cursor: pointer;
             margin: 20px 0;
+            transition: all 0.3s ease;
         }
         .upload-area:hover {
             background-color: #f8f9fa;
+        }
+        .upload-area.drag-over {
+            background-color: #e7f3ff;
+            border-color: #0056b3;
+            border-style: solid;
         }
         .upload-preview {
             max-width: 200px;
@@ -178,9 +184,9 @@
 
         <div class="form-group">
             <label>上传图片:</label>
-            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
                 <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect()">
-                <div id="uploadText">点击选择图片文件</div>
+                <div id="uploadText">📁 点击选择或拖放图片到此处</div>
                 <div id="selectedFile" style="display: none;"></div>
             </div>
         </div>
@@ -514,6 +520,58 @@
         
         // 每30秒检查一次状态
         setInterval(checkStatus, 30000);
+
+        // 拖放功能初始化
+        (function initDragAndDrop() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            // 阻止整个页面的默认拖放行为
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // 上传区域的拖放事件
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.add('drag-over');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.remove('drag-over');
+                }, false);
+            });
+
+            // 处理拖放的文件
+            uploadArea.addEventListener('drop', (e) => {
+                preventDefaults(e);
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    
+                    // 检查是否为图片文件
+                    if (file.type.startsWith('image/')) {
+                        // 将文件设置到 file input
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        fileInput.files = dataTransfer.files;
+                        
+                        // 显示预览
+                        handleFileSelect();
+                    } else {
+                        showToast('请拖放图片文件 (jpg, png, gif 等)');
+                    }
+                }
+            }, false);
+        })();
     </script>
 </body>
 </html>
