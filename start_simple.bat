@@ -77,8 +77,8 @@ echo [TIP] 按 Ctrl+C 停止服务
 echo ===============================================
 echo.
 
-:: Open browser
-start "" http://localhost:8001
+:: Open frontend in browser
+start "" "%~dp0simple_frontend.html"
 
 %PYTHON_CMD% main.py
 pause

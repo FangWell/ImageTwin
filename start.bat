@@ -114,15 +114,13 @@ if %errorlevel% neq 0 (
 echo.
 echo [INFO] 启动后端服务...
 echo [INFO] 后端地址: http://localhost:8001
-echo [INFO] API文档: http://localhost:8001/docs
 echo.
-echo [TIP] 服务启动后会自动打开浏览器
 echo [TIP] 按 Ctrl+C 停止服务
 echo ===============================================
 echo.
 
-:: Open browser after a short delay
-start "" http://localhost:8001
+:: Open frontend in browser
+start "" "%~dp0simple_frontend.html"
 
 python main.py
 

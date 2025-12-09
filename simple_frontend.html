@@ -191,14 +191,7 @@
                 <div class="slider-group">
                     <label>相似度阈值: <span id="thresholdValue">0.80</span></label>
                     <input type="range" id="similarityRange" min="0.1" max="1.0" step="0.01" value="0.8" oninput="updateThreshold()">
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="ignoreResolution">
-                    <label for="ignoreResolution">忽略分辨率</label>
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="ignoreMetadata">
-                    <label for="ignoreMetadata">忽略元数据</label>
+                    <small style="color: #666;">1.0 = 完全相同，0.8 = 非常相似</small>
                 </div>
             </div>
         </div>
@@ -357,8 +350,6 @@
                 formData.append('file', file);
                 formData.append('directory', directory);
                 formData.append('similarity_threshold', document.getElementById('similarityRange').value);
-                formData.append('ignore_resolution', document.getElementById('ignoreResolution').checked);
-                formData.append('ignore_metadata', document.getElementById('ignoreMetadata').checked);
 
                 const response = await fetch(`${API_BASE}/api/search`, {
                     method: 'POST',
