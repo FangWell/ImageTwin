@@ -1,45 +1,84 @@
 @echo off
 chcp 65001 >nul
-title Image Similarity Search Tool - Simple Start
+title ImageTwin - 快速启动
 echo ===============================================
-echo    Image Similarity Search Tool (Simple)
+echo       ImageTwin - 智能图片相似度搜索
 echo ===============================================
 echo.
 
-:: Check Python
-python --version
-if %errorlevel% neq 0 (
-    echo [ERROR] Python not found
-    pause
-    exit /b 1
+:: Check Python - try py launcher first (most reliable on Windows)
+set PYTHON_CMD=
+
+:: Try py launcher first
+py --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set PYTHON_CMD=py
+    goto :found_python
 )
+
+:: Try python
+python --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set PYTHON_CMD=python
+    goto :found_python
+)
+
+:: Try python3
+python3 --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set PYTHON_CMD=python3
+    goto :found_python
+)
+
+:: Check Windows Apps python (may need Store install)
+"%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe" --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set PYTHON_CMD="%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe"
+    goto :found_python
+)
+
+echo [ERROR] Python 未找到
+echo.
+echo 请确保:
+echo   1. 已安装 Python 3.8 或更高版本
+echo   2. 安装时勾选了 "Add Python to PATH"
+echo.
+echo 下载: https://www.python.org/downloads/
+pause
+exit /b 1
+
+:found_python
+echo [INFO] 检测到: %PYTHON_CMD%
+%PYTHON_CMD% --version
 
 cd /d "%~dp0backend"
 
 :: Try to run directly first (if deps already installed)
-echo [INFO] Checking if dependencies are available...
-python -c "import fastapi, uvicorn, PIL, imagehash" >nul 2>&1
+echo [INFO] 检查依赖包...
+%PYTHON_CMD% -c "import fastapi, uvicorn, PIL, imagehash" >nul 2>&1
 if %errorlevel% equ 0 (
-    echo [INFO] Dependencies found, starting service...
+    echo [INFO] 依赖包已就绪
     goto :start_service
 )
 
 :: If not available, try simple installation
-echo [INFO] Installing minimal dependencies...
-python -m pip install --no-cache-dir fastapi uvicorn pillow imagehash python-multipart pydantic aiofiles
+echo [INFO] 安装依赖包...
+%PYTHON_CMD% -m pip install --no-cache-dir fastapi uvicorn pillow imagehash python-multipart pydantic aiofiles
 if %errorlevel% neq 0 (
-    echo [ERROR] Installation failed. Please run install_deps.py manually
+    echo [ERROR] 安装失败，请手动运行 install_deps.py
     pause
     exit /b 1
 )
 
 :start_service
 echo.
-echo [INFO] Starting service on http://localhost:8001
-echo [TIP] Open simple_frontend.html in browser
-echo [TIP] Press Ctrl+C to stop
+echo [INFO] 启动服务: http://localhost:8001
+echo [TIP] 按 Ctrl+C 停止服务
 echo ===============================================
 echo.
 
-python main.py
+:: Open browser
+start "" http://localhost:8001
+
+%PYTHON_CMD% main.py
 pause
