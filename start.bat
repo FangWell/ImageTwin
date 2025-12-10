@@ -88,17 +88,17 @@ if %errorlevel% neq 0 (
     echo [WARNING] pip 升级失败，继续...
 )
 
-echo [INFO] 安装依赖包...
-python -m pip install -r requirements.txt --quiet --disable-pip-version-check
+echo [INFO] 安装核心依赖包...
+python -m pip install fastapi uvicorn python-multipart Pillow imagehash pydantic aiofiles --quiet --disable-pip-version-check
 if %errorlevel% neq 0 (
-    echo [WARNING] 依赖安装失败，尝试单独安装...
-    python -m pip install fastapi --quiet --disable-pip-version-check
-    python -m pip install uvicorn --quiet --disable-pip-version-check
-    python -m pip install python-multipart --quiet --disable-pip-version-check
-    python -m pip install Pillow --quiet --disable-pip-version-check
-    python -m pip install imagehash --quiet --disable-pip-version-check
-    python -m pip install pydantic --quiet --disable-pip-version-check
-    python -m pip install aiofiles --quiet --disable-pip-version-check
+    echo [WARNING] 部分依赖安装失败，继续...
+)
+
+:: 尝试安装 OpenCV（可选，用于局部特征匹配）
+echo [INFO] 安装 OpenCV (可选)...
+python -m pip install numpy opencv-python-headless --only-binary=:all: --quiet --disable-pip-version-check
+if %errorlevel% neq 0 (
+    echo [INFO] OpenCV 安装失败，局部特征匹配功能将不可用
 )
 
 :: Check if critical packages are available

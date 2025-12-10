@@ -58,16 +58,29 @@ echo [INFO] 检查依赖包...
 %PYTHON_CMD% -c "import fastapi, uvicorn, PIL, imagehash" >nul 2>&1
 if %errorlevel% equ 0 (
     echo [INFO] 依赖包已就绪
-    goto :start_service
+    goto :check_opencv
 )
 
 :: If not available, try simple installation
-echo [INFO] 安装依赖包...
+echo [INFO] 安装核心依赖包...
 %PYTHON_CMD% -m pip install --no-cache-dir fastapi uvicorn pillow imagehash python-multipart pydantic aiofiles
 if %errorlevel% neq 0 (
     echo [ERROR] 安装失败，请手动运行 install_deps.py
     pause
     exit /b 1
+)
+
+:check_opencv
+:: 尝试安装 OpenCV（可选）
+%PYTHON_CMD% -c "import cv2" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [INFO] 安装 OpenCV (用于局部特征匹配)...
+    %PYTHON_CMD% -m pip install numpy opencv-python-headless --only-binary=:all: --no-cache-dir >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo [INFO] OpenCV 安装失败，局部特征匹配将不可用
+    ) else (
+        echo [INFO] OpenCV 安装成功
+    )
 )
 
 :start_service
