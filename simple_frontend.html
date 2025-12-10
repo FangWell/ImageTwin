@@ -185,7 +185,7 @@
         <div class="form-group">
             <label>上传图片:</label>
             <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-                <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect()">
+                <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="droppedFile = null; handleFileSelect()">
                 <div id="uploadText">📁 点击选择或拖放图片到此处</div>
                 <div id="selectedFile" style="display: none;"></div>
             </div>
@@ -213,6 +213,9 @@
     <script>
         const API_BASE = 'http://localhost:8001';
         
+        // 全局变量存储拖放的文件
+        let droppedFile = null;
+        
         // 检查服务器状态
         async function checkStatus() {
             try {
@@ -239,10 +242,17 @@
         }
 
         // 处理文件选择
-        function handleFileSelect() {
-            const fileInput = document.getElementById('fileInput');
-            const file = fileInput.files[0];
+        function handleFileSelect(file) {
+            // 如果没有传入file参数，从fileInput获取
+            if (!file) {
+                const fileInput = document.getElementById('fileInput');
+                file = fileInput.files[0];
+            }
+            
             if (file) {
+                // 保存到全局变量
+                droppedFile = file;
+                
                 document.getElementById('uploadText').style.display = 'none';
                 document.getElementById('selectedFile').style.display = 'block';
                 
@@ -335,7 +345,9 @@
         async function searchSimilar() {
             const fileInput = document.getElementById('fileInput');
             const directory = document.getElementById('directoryInput').value.trim();
-            const file = fileInput.files[0];
+            
+            // 优先使用拖放的文件，其次使用file input的文件
+            const file = droppedFile || fileInput.files[0];
 
             if (!file) {
                 alert('请选择图片文件');
@@ -559,13 +571,8 @@
                     
                     // 检查是否为图片文件
                     if (file.type.startsWith('image/')) {
-                        // 将文件设置到 file input
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(file);
-                        fileInput.files = dataTransfer.files;
-                        
-                        // 显示预览
-                        handleFileSelect();
+                        // 直接传递文件给处理函数
+                        handleFileSelect(file);
                     } else {
                         showToast('请拖放图片文件 (jpg, png, gif 等)');
                     }
