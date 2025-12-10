@@ -123,9 +123,6 @@ async def search_similar_images(
                 "method": "phash"
             }
         
-                "method": "phash"
-            }
-        
     except HTTPException:
         raise
     except Exception as e:
