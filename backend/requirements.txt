@@ -5,3 +5,6 @@ Pillow>=9.0.0
 imagehash>=4.0.0
 pydantic>=2.0.0
 aiofiles>=0.8.0
+# 可选：局部特征匹配功能需要
+opencv-python>=4.5.0
+numpy>=1.20.0

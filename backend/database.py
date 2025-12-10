@@ -117,3 +117,17 @@ class DatabaseManager:
         
         conn.close()
         return len(to_remove)
+    
+    def get_images_in_directory(self, directory: str) -> List[Tuple[str, str]]:
+        """获取指定目录中已索引的图片"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT file_path, hash_value FROM image_hashes 
+            WHERE file_path LIKE ?
+        ''', (f"{directory}%",))
+        
+        results = cursor.fetchall()
+        conn.close()
+        return results

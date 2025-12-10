@@ -186,7 +186,7 @@
             <label>上传图片:</label>
             <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
                 <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="droppedFile = null; handleFileSelect()">
-                <div id="uploadText">📁 点击选择或拖放图片到此处</div>
+                <div id="uploadText">📁 点击选择、拖放图片或 <strong>Ctrl+V</strong> 粘贴截图</div>
                 <div id="selectedFile" style="display: none;"></div>
             </div>
         </div>
@@ -198,6 +198,13 @@
                     <label>相似度阈值: <span id="thresholdValue">0.80</span></label>
                     <input type="range" id="similarityRange" min="0.1" max="1.0" step="0.01" value="0.8" oninput="updateThreshold()">
                     <small style="color: #666;">1.0 = 完全相同，0.8 = 非常相似</small>
+                </div>
+                <div class="checkbox-group" style="display: flex; align-items: center; gap: 8px; margin-left: 20px;">
+                    <input type="checkbox" id="useFeatureMatch" style="width: auto;">
+                    <label for="useFeatureMatch" style="font-weight: normal; margin: 0; cursor: pointer;">
+                        🎯 局部特征匹配
+                        <small style="color: #666; display: block; font-size: 11px;">适用于截图、部分遮挡</small>
+                    </label>
                 </div>
             </div>
         </div>
@@ -368,6 +375,7 @@
                 formData.append('file', file);
                 formData.append('directory', directory);
                 formData.append('similarity_threshold', document.getElementById('similarityRange').value);
+                formData.append('use_feature_match', document.getElementById('useFeatureMatch').checked);
 
                 const response = await fetch(`${API_BASE}/api/search`, {
                     method: 'POST',
@@ -579,6 +587,33 @@
                 }
             }, false);
         })();
+
+        // Ctrl+V 粘贴功能
+        document.addEventListener('paste', async (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                
+                // 检查是否为图片
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    
+                    const file = item.getAsFile();
+                    if (file) {
+                        // 为粘贴的图片创建一个有意义的文件名
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                        const extension = file.type.split('/')[1] || 'png';
+                        const namedFile = new File([file], `clipboard_${timestamp}.${extension}`, { type: file.type });
+                        
+                        handleFileSelect(namedFile);
+                        showToast('✅ 已粘贴剪贴板图片');
+                    }
+                    break;
+                }
+            }
+        });
     </script>
 </body>
 </html>

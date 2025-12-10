@@ -55,8 +55,7 @@ async def search_similar_images(
     file: UploadFile = File(...),
     directory: str = Form(...),
     similarity_threshold: float = Form(0.8),
-    ignore_resolution: bool = Form(False),
-    ignore_metadata: bool = Form(False)
+    use_feature_match: bool = Form(False)
 ):
     """搜索相似图片"""
     if not file.content_type.startswith('image/'):
@@ -68,31 +67,67 @@ async def search_similar_images(
         temp_path = tmp_file.name
     
     try:
-        # 计算上传图片的哈希
-        upload_hash = image_processor.calculate_hash(temp_path, ignore_resolution, ignore_metadata)
+        if use_feature_match:
+            # 使用局部特征匹配（适用于截图、部分匹配）
+            from image_processor import CV2_AVAILABLE
+            if not CV2_AVAILABLE:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="局部特征匹配需要安装 OpenCV。请运行: pip install opencv-python numpy"
+                )
+            
+            # 获取目录中的所有图片
+            image_paths = image_processor.scan_directory(directory)
+            
+            # 也包含已索引的图片
+            indexed_images = db_manager.get_images_in_directory(directory)
+            all_paths = list(set(image_paths + [img[0] for img in indexed_images]))
+            
+            # 使用特征匹配搜索
+            results = image_processor.search_with_feature_match(
+                temp_path,
+                all_paths,
+                min_match_count=10,
+                threshold=similarity_threshold * 0.5  # 特征匹配阈值更宽松
+            )
+            
+            return {
+                "results": results,
+                "total": len(results),
+                "method": "feature_match"
+            }
+        else:
+            # 使用传统的感知哈希匹配
+            upload_hash = image_processor.calculate_hash(temp_path)
+            
+            # 搜索相似图片
+            similar_images = db_manager.find_similar_images(
+                upload_hash, 
+                directory, 
+                similarity_threshold
+            )
+            
+            results = []
+            for image_path, stored_hash, similarity in similar_images:
+                if os.path.exists(image_path):
+                    results.append({
+                        "path": image_path,
+                        "similarity": similarity,
+                        "exists": True
+                    })
+            
+            return {
+                "results": results,
+                "total": len(results),
+                "query_hash": str(upload_hash),
+                "method": "phash"
+            }
         
-        # 搜索相似图片
-        similar_images = db_manager.find_similar_images(
-            upload_hash, 
-            directory, 
-            similarity_threshold
-        )
+                "method": "phash"
+            }
         
-        results = []
-        for image_path, stored_hash, similarity in similar_images:
-            if os.path.exists(image_path):
-                results.append({
-                    "path": image_path,
-                    "similarity": similarity,
-                    "exists": True
-                })
-        
-        return {
-            "results": results,
-            "total": len(results),
-            "query_hash": str(upload_hash)
-        }
-        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")
     finally:
